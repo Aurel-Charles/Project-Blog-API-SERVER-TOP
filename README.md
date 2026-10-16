@@ -1,249 +1,248 @@
-# Blog API — Fiche récap du serveur
+# Blog API
 
-Blog perso : **1 admin** (moi) qui écrit, des **visiteurs** qui lisent et commentent (anonymes ou inscrits).
-3 repos séparés : `blog-api`, `blog-client`, `blog-admin`.
+REST API for a personal blog, built as part of [The Odin Project](https://www.theodinproject.com/lessons/node-path-nodejs-blog-api) Node.js curriculum.
 
----
+The API is the backend for two separate front-ends:
 
-## 1. Décisions clés
+- **blog-client**: the public site, where visitors read posts and leave comments
+- **blog-admin**: the author's dashboard, to write, edit and publish posts and moderate comments
 
-- **Rôle** : enum `Role` (`USER` / `ADMIN`), défaut `USER`. Le compte admin est créé par le **seed**, jamais par une route.
-- **Publié / brouillon** : pas de booléen, juste `publishedAt`.
-  - brouillon → `publishedAt: null`
-  - publier → `publishedAt: new Date()` (date posée **par le serveur**, le front envoie juste `{ "published": true }`)
-  - dépublier → `publishedAt: null`
-  - lister les publiés → `where: { publishedAt: { not: null } }`
-- **Commentaires** : `name` toujours rempli.
-  - user connecté → le serveur prend le nom depuis `req.user` (et `authorId` depuis le token, **jamais** depuis le body)
-  - anonyme → `name` obligatoire dans le body (express-validator)
-- **Suppression** :
-  - post supprimé → ses commentaires aussi (`onDelete: Cascade`)
-  - user supprimé (bonus) → ses commentaires restent, `authorId` passe à null (`onDelete: SetNull`), le `name` reste
+The server only speaks JSON. Authentication uses **JSON Web Tokens** sent in the `Authorization` header.
+
+> 🚧 Work in progress. See [Roadmap](#roadmap) for what is done and what is coming.
 
 ---
 
+## Features
 
+- Public read access to published posts
+- Draft / published workflow (a post is published when `publishedAt` is set)
+- JWT login, with role-based access (`USER` / `ADMIN`)
+- Comments from anonymous visitors (name required) or logged-in readers
+- Centralized error handling with consistent JSON errors and proper HTTP status codes
 
-## 2. Schéma Prisma
+## Tech stack
 
-```prisma
-enum Role {
-  USER
-  ADMIN
-}
+- **Node.js** (≥ 22.18) + **Express 5**, ES modules
+- **PostgreSQL** + **Prisma 7** (with `@prisma/adapter-pg`)
+- **jsonwebtoken** for auth, **bcryptjs** for password hashing
+- **express-validator** for input validation
+- **cors**, **dotenv**, **nodemon**
 
-model User {
-  id        Int       @id @default(autoincrement())
-  firstname String
-  lastname  String
-  email     String    @unique
-  password  String
-  role      Role      @default(USER)
-  createdAt DateTime  @default(now())
-  posts     Post[]
-  comments  Comment[]
-}
+---
 
-model Post {
-  id          Int       @id @default(autoincrement())
-  title       String
-  content     String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  publishedAt DateTime?
-  author      User      @relation(fields: [authorId], references: [id])
-  authorId    Int
-  comments    Comment[]
-}
+## Getting started
 
-model Comment {
-  id        Int      @id @default(autoincrement())
-  content   String
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId    Int
-  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  authorId  Int?
-}
+### Prerequisites
+
+- Node.js **22.18 or later** (the generated Prisma client is TypeScript, which recent Node versions run natively)
+- A PostgreSQL database
+
+### Installation
+
+```bash
+git clone git@github.com:Aurel-Charles/Project-Blog-API-SERVER-TOP.git
+cd Project-Blog-API-SERVER-TOP
+npm install
 ```
 
----
+### Environment variables
 
+Create a `.env` file at the root:
 
-
-## 3. Arborescence
-
-```
-blog-api/
-├── prisma/
-│   ├── schema.prisma
-│   └── seed.js                ← crée le compte ADMIN
-├── src/
-│   ├── app.js                 ← express(), express.json(), cors, montage des routers
-│   ├── routes/
-│   │   ├── authRouter.js
-│   │   ├── postsRouter.js
-│   │   └── commentsRouter.js
-│   ├── controllers/
-│   │   ├── authController.js
-│   │   ├── postsController.js
-│   │   └── commentsController.js
-│   ├── db/
-│   │   ├── prisma.js          ← une seule instance de PrismaClient
-│   │   └── queries.js         ← getPublishedPosts(), createComment()…
-│   └── middlewares/
-│       ├── auth.js            ← optionalAuth, isAuth, isAdmin, canEditComment
-│       └── validators.js      ← règles express-validator
-├── .env                       ← DATABASE_URL, JWT_SECRET
-└── package.json
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/blog_api"
+JWT_SECRET="a-long-random-string"
+ADMIN_EMAIL="admin@example.com"
+ADMIN_PASSWORD="choose-a-strong-password"
+PORT=3000
 ```
 
-**Chemin d'une requête** : route → middlewares (auth, validation) → controller → queries → réponse JSON.
+Generate a strong `JWT_SECRET` with:
 
-`cors` : obligatoire, les front-ends seront sur un autre domaine que l'API.
+```bash
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
 
----
+### Database
 
+```bash
+npx prisma migrate dev     # create the tables
+npx prisma generate        # generate the Prisma client in generated/prisma
+npm run seed               # create the admin account and sample data
+```
 
+⚠️ The seed script deletes all existing posts (and their comments) before inserting sample data. Only use it in development.
 
-## 4. Routes
+The seed creates:
 
+- the admin account from `ADMIN_EMAIL` / `ADMIN_PASSWORD`
+- a test reader: `lecteur@test.fr` / `lecteur123`
+- 4 posts (3 published, 1 draft) and 2 comments
 
+### Run
 
-### Auth
+```bash
+npm run dev
+```
 
+The API runs on `http://localhost:3000`.
 
-| Route                 | Accès  |
-| --------------------- | ------ |
-| `POST /auth/register` | public |
-| `POST /auth/login`    | public |
+### Scripts
 
-
-
-
-### Posts
-
-
-| Route                   | Accès                                    |
-| ----------------------- | ---------------------------------------- |
-| `GET /posts`            | public (admin voit aussi les brouillons) |
-| `GET /posts/:postId`    | public (brouillon → admin seulement)     |
-| `POST /posts`           | admin                                    |
-| `PATCH /posts/:postId`  | admin (édition + publier/dépublier)      |
-| `DELETE /posts/:postId` | admin                                    |
-
-
-
-
-### Comments (routes imbriquées, toujours au pluriel)
-
-
-| Route                                       | Accès                                 |
-| ------------------------------------------- | ------------------------------------- |
-| `GET /posts/:postId/comments`               | public                                |
-| `POST /posts/:postId/comments`              | public (auth optionnelle pour le nom) |
-| `PATCH /posts/:postId/comments/:commentId`  | admin ou auteur du commentaire        |
-| `DELETE /posts/:postId/comments/:commentId` | admin ou auteur du commentaire        |
-
-
-> Router imbriqué : pense à `express.Router({ mergeParams: true })` dans `commentsRouter.js`, sinon `req.params.postId` sera vide.
+| Script | Description |
+|---|---|
+| `npm run dev` | Start the server with nodemon |
+| `npm run seed` | Seed the database (development only) |
 
 ---
 
+## API
 
+### Authentication
 
-## 5. Middlewares d'auth
+Log in to get a token:
 
+```http
+POST /auth/login
+Content-Type: application/json
 
+{ "email": "admin@example.com", "password": "..." }
+```
 
-### `isAuth`
+```json
+{ "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+```
 
-1. Lire `req.headers.authorization` et garder ce qu'il y a après `"Bearer "` (`.split(" ")[1]`). Absent → **401**.
-2. `jwt.verify(token, process.env.JWT_SECRET)` dans un `try/catch` (⚠️ `verify`, pas `decode`). Invalide ou expiré → **401**.
-3. (optionnel) Retrouver le user en base avec l'`id` du payload. Introuvable → **401**.
-4. `req.user = user` puis `next()`.
+Then send it with every protected request:
 
+```http
+Authorization: Bearer <token>
+```
 
+Tokens expire after 1 day. To log out, the client simply deletes its token.
 
-### `optionalAuth`
+### Endpoints
 
-Même chose, mais en cas d'absence ou d'erreur : juste `next()` sans `req.user`, pas de 401.
-→ pour `GET /posts`, `GET /posts/:postId`, `POST .../comments`.
+✅ implemented · 🚧 planned
 
-### `isAdmin` (après `isAuth`)
+#### Auth
 
-`req.user.role === "ADMIN"` → `next()`, sinon **403**.
+| Method | Route | Access | Status |
+|---|---|---|---|
+| `POST` | `/auth/login` | Public | ✅ |
+| `POST` | `/auth/register` | Public | 🚧 |
 
-### `canEditComment` (après `isAuth`)
+#### Posts
 
-1. Chercher le commentaire avec `req.params.commentId`. Introuvable → **404**.
-2. `comment.authorId === req.user.id` **ou** `req.user.role === "ADMIN"` → `next()`.
-3. Sinon → **403**.
+| Method | Route | Access | Status |
+|---|---|---|---|
+| `GET` | `/posts` | Public (published posts only) | ✅ |
+| `GET` | `/posts/:postId` | Public (published posts only) | ✅ |
+| `POST` | `/posts` | Admin | 🚧 |
+| `PATCH` | `/posts/:postId` | Admin (edit, publish / unpublish) | 🚧 |
+| `DELETE` | `/posts/:postId` | Admin | 🚧 |
+
+#### Comments
+
+| Method | Route | Access | Status |
+|---|---|---|---|
+| `GET` | `/posts/:postId/comments` | Public | 🚧 |
+| `POST` | `/posts/:postId/comments` | Public (name required if not logged in) | 🚧 |
+| `PATCH` | `/posts/:postId/comments/:commentId` | Admin or comment author | 🚧 |
+| `DELETE` | `/posts/:postId/comments/:commentId` | Admin or comment author | 🚧 |
+
+### Example: list posts
+
+```http
+GET /posts
+```
+
+```json
+[
+  {
+    "id": 3,
+    "title": "Hugo ou Express ?",
+    "content": "...",
+    "createdAt": "2026-10-13T08:00:00.000Z",
+    "updatedAt": "2026-10-15T08:00:00.000Z",
+    "publishedAt": "2026-10-14T08:00:00.000Z",
+    "authorId": 1,
+    "author": { "firstname": "Aurel", "lastname": "Charles" }
+  }
+]
+```
+
+Posts are sorted by `publishedAt`, most recent first. The author's password and email are never returned.
+
+### Errors
+
+All errors share the same shape:
+
+```json
+{ "error": "Invalid or expired token" }
+```
+
+| Status | Meaning |
+|---|---|
+| `400` | Invalid input |
+| `401` | Not logged in, invalid or expired token, wrong credentials |
+| `403` | Logged in, but not allowed (e.g. not an admin) |
+| `404` | Resource not found |
+| `409` | Conflict (e.g. email already used) |
+| `500` | Server error |
 
 ---
 
+## Data model
 
+- **User**: `firstname`, `lastname`, `email` (unique), hashed `password`, `role` (`USER` by default, `ADMIN`)
+- **Post**: `title`, `content`, `publishedAt` (`null` = draft), belongs to a User
+- **Comment**: `content`, `name`, belongs to a Post, optionally linked to a User
 
-## 6. Login — `POST /auth/login`
+Deleting a post deletes its comments. Deleting a user keeps their comments (the `name` remains).
 
-1. Lire `email` et `password` dans `req.body`.
-2. `findUnique({ where: { email } })`. Pas trouvé → **401**.
-3. `bcrypt.compare(password, user.password)`. Faux → **401**.
-  ⚠️ Même message pour 2 et 3 : « Email ou mot de passe incorrect ».
-4. `jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" })`
-5. Répondre `{ token }`.
+The full schema is in [`prisma/schema.prisma`](prisma/schema.prisma).
 
-**Payload** : `id` + `role` uniquement. Jamais le password (même hashé), pas d'email. Le token est signé, pas chiffré : tout le monde peut le lire sur jwt.io.
+## Project structure
 
-**Plus de** `serializeUser` **/** `deserializeUser` : pas de session, c'est le token qui transporte l'identité.
+```
+src/
+├── app.js              # Express app, routers, error handler
+├── routes/             # URL → middlewares → controller
+├── controllers/        # Read the request, call queries, send JSON
+├── db/
+│   ├── prisma.js       # Prisma client instance
+│   └── queries.js      # All database access
+├── middlewares/
+│   └── auth.js         # isAuth, isAdmin
+└── utils/
+    ├── httpErrorHandler.js   # HttpError class
+    └── verifyPassword.js     # bcrypt helpers
+prisma/
+├── schema.prisma
+├── migrations/
+└── seed.js
+```
 
-**Côté client** : stocker le token dans `localStorage`, l'envoyer dans `Authorization: Bearer <token>`. Logout = supprimer le token.
-
----
-
-
-
-## 7. Register — `POST /auth/register`
-
-1. Valider (express-validator) : champs non vides, `isEmail()`, longueur mini du password → **400**.
-2. Email déjà pris (`findUnique`) → **409**.
-3. `bcrypt.hash(password, 10)`.
-4. Créer le user avec firstname, lastname, email, hash. ⚠️ **Jamais** de `role` depuis le body.
-5. **201** (message, ou token directement pour connecter dans la foulée).
-
----
-
-
-
-## 8. Codes HTTP utilisés
-
-
-| Code | Quand                                                |
-| ---- | ---------------------------------------------------- |
-| 200  | OK (GET, PATCH)                                      |
-| 201  | Créé (POST)                                          |
-| 204  | Supprimé, pas de contenu (DELETE)                    |
-| 400  | Données invalides (validation)                       |
-| 401  | Pas connecté / token invalide / mauvais identifiants |
-| 403  | Connecté mais pas le droit                           |
-| 404  | Ressource introuvable                                |
-| 409  | Conflit (email déjà utilisé)                         |
-
+A request flows through: **route → middlewares → controller → queries → JSON response**.
 
 ---
 
+## Roadmap
 
+- [x] Database schema, migrations and seed
+- [x] Centralized error handling
+- [x] Public routes to read published posts
+- [x] JWT login, `isAuth` and `isAdmin` middlewares
+- [ ] Create, edit, publish and delete posts (admin)
+- [ ] Admin can see drafts through the public routes
+- [ ] Comments routes, with author / admin permissions
+- [ ] Input validation with express-validator
+- [ ] Reader registration
+- [ ] Deployment
 
-## 9. Ordre de travail
+## Related repositories
 
-- [ ] `npm init`, installer express, prisma, @prisma/client, bcryptjs, jsonwebtoken, express-validator, cors, dotenv
-- [ ] Écrire le schéma + première migration
-- [ ] Seed du compte ADMIN
-- [ ] `app.js` + routes posts (sans auth), tester avec Postman
-- [ ] Login + `isAuth` + `isAdmin`, protéger les routes admin
-- [ ] `optionalAuth`, filtrage des brouillons
-- [ ] Routes comments + `canEditComment`
-- [ ] Register (bonus)
-- [ ] Suppression de compte (bonus)
+- `blog-client`: public reader site (coming soon)
+- `blog-admin`: author dashboard (coming soon)

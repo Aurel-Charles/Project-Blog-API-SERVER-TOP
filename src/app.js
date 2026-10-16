@@ -1,8 +1,8 @@
 import "dotenv/config";
 import express from 'express'
-import { HttpError } from "./utils/httpErrorHandler.js";
 import { postsRouter } from "./routes/postsRouter.js";
 import cors from "cors";
+import { authRouter } from "./routes/authRouter.js";
 
 const app = express()
 const PORT = process.env.PORT || 3000;
@@ -12,31 +12,26 @@ app.use(express.json())
 
 // Routes
 app.use('/posts', postsRouter)
+app.use('/auth', authRouter)
 
 app.get('/', (req,res)=> {
-    res.json({message: "Hello world"})
+    res.json({App: "Blog Server API", message : "Hello blogers"})
 })
 
-
-
-// route test
-app.get("/test-error", () => {
-    throw new HttpError("Post introuvable", 404);
+app.use((req, res) => {
+    res.status(404).json({ error: "Route not found" });
   });
-  
-app.get("/test-crash", () => {
-    throw new Error("Boom");
-});
-
 
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(err.statusCode || 500).json({error:  err.message});
-});
+    console.error(err);
+    const status = err.statusCode || 500;
+    const message = status === 500 ? "Internal server error" : err.message;
+    res.status(status).json({ error: message });
+  });
 
 app.listen(PORT, (error)=> {
     if (error) {
         throw error;
     }
-    console.log(`Blog Serve API - Express app - Visit: http://localhost:${PORT}`);
+    console.log(`Blog Server API - Express app - Visit: http://localhost:${PORT}`);
 })
