@@ -11,6 +11,26 @@ export const validateLogin = [
         .notEmpty().withMessage("Password is required"),
 ]
 
+export const validateRegister =[
+    body("firstname")
+    .trim()
+    .notEmpty().withMessage("Firstname is required")
+    .isLength({max: 20}).withMessage("Firstname must be 20 characters max"),
+    body("lastname")
+    .trim()
+    .notEmpty().withMessage("Lastname is required")
+    .isLength({max: 20}).withMessage("Lastname must be 20 characters max"),
+    body("email")
+    .trim()
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Invalid email"),
+body("password")
+    .notEmpty().withMessage("Password is required")
+    .isLength({min: 7}).withMessage("Password must be at least 7 characters"),
+body("confirmPassword")
+    .notEmpty().withMessage("confirmPassword is required")
+    .custom((value, {req}) => value === req.body.password ).withMessage("Passwords do not match"),
+]
 
 export const validateCreatePost =[
     body("title")
@@ -39,16 +59,19 @@ export const validateCreateComment = [
     body("name")
         .if((value, {req}) => req.user === undefined )
         .trim()
-        .notEmpty().withMessage("Name is required"),
+        .notEmpty().withMessage("Name is required")
+        .isLength({max: 40}).withMessage("Name must be 40 characters max"),
     body("content")
         .trim()
         .notEmpty().withMessage("Comment is required")
-]
-
+        .isLength({max: 250}).withMessage("Comment must be 250 characters max")
+    ]
+    
 export const validateUpdateComment = [
     body("content")
         .trim()
         .notEmpty().withMessage("Comment is required")
+        .isLength({max: 250}).withMessage("Comment must be 250 characters max")
 ]
 
 

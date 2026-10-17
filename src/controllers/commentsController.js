@@ -20,9 +20,6 @@ export async function getComments(req, res) {
 
 export async function createComment(req, res) {
     const content = req.body.content
-    if (!content) {
-        throw new HttpError("Comment is empty", 400)
-    }
 
     const postId = Number(req.params.postId)
     if (!Number.isInteger(postId)) {
@@ -59,9 +56,6 @@ export async function createComment(req, res) {
 
 export async function updateComment(req, res) {
     const content = req.body.content
-    if (!content) {
-        throw new HttpError("Content is empty", 400);
-    }
     const data = {
         content
     }

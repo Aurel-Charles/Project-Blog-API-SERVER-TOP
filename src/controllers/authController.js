@@ -1,6 +1,6 @@
-import { getUserByEmail } from "../db/queries.js"
+import { getUserByEmail, insertUser } from "../db/queries.js"
 import { HttpError } from "../utils/httpErrorHandler.js";
-import { verifyPassword } from "../utils/verifyPassword.js";
+import { createPassword, verifyPassword } from "../utils/verifyPassword.js";
 import jwt from "jsonwebtoken";
 
 
@@ -23,4 +23,32 @@ export async function login(req, res){
     )
     
     res.json({token})
+}
+
+export async function register(req, res) {
+    const {firstname, lastname, email, password} = req.body
+
+    const isTaken = await getUserByEmail(email)
+    if (isTaken !== null) {
+        throw new HttpError("Email is already taken", 409);
+    }
+
+    const hashPassword = await createPassword(password)
+
+    const newUser = {
+        firstname,
+        lastname,
+        email,
+        password: hashPassword
+    }
+    
+    const registeredUser = await insertUser(newUser)
+
+    const token = jwt.sign(
+        {id: registeredUser.id, role: registeredUser.role},
+        process.env.JWT_SECRET,
+        {expiresIn: "1d"}
+    )
+
+    res.status(201).json({token})
 }

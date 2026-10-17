@@ -21,6 +21,18 @@ export async function getUserByEmail(email) {
     return user
 }
 
+export async function insertUser(user) {
+    const newUser = await prisma.user.create({
+        data: {
+            firstname: user.firstname,
+            lastname: user.lastname,
+            email: user.email,
+            password: user.password
+        },
+    })
+    return newUser
+}
+
 // POSTS queries ----------------------------------
 
 export async function getAllPosts(){
