@@ -152,3 +152,6 @@ vite.config.ts.timestamp-*
 
 # Personal notes
 BLOG-API-RECAP.md
+
+# Editor settings
+.vscode/
