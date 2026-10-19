@@ -137,6 +137,7 @@ Authorization: Bearer <token>
 |---|---|---|---|
 | `POST` | `/auth/register` | Public | `firstname`, `lastname`, `email`, `password`, `confirmPassword` |
 | `POST` | `/auth/login` | Public | `email`, `password` |
+| `GET` | `/auth/me` | Logged in | — |
 
 **Register rules**: `firstname` and `lastname` are required (20 characters max), `email` must be valid and not already used (`409` otherwise), `password` needs at least 7 characters and `confirmPassword` must match it. New accounts always get the `USER` role.
 
@@ -158,6 +159,21 @@ Content-Type: application/json
 ```json
 { "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
 ```
+
+**Current user**: `GET /auth/me` returns the account behind the token. The client can call it on page load to check that the stored token is still valid and to know who is logged in.
+
+```http
+GET /auth/me
+Authorization: Bearer <token>
+```
+
+`200 OK`
+
+```json
+{ "id": 2, "firstname": "Léa", "lastname": "Martin", "email": "lea@example.com", "role": "USER" }
+```
+
+Returns `401` if the token is missing, invalid or expired, or if the account no longer exists. The password is never returned.
 
 ### Posts
 

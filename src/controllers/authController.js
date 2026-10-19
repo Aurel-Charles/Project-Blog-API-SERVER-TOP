@@ -1,4 +1,4 @@
-import { getUserByEmail, insertUser } from "../db/queries.js"
+import { getUserByEmail, getUserByID, insertUser } from "../db/queries.js"
 import { HttpError } from "../utils/httpErrorHandler.js";
 import { createPassword, verifyPassword } from "../utils/verifyPassword.js";
 import jwt from "jsonwebtoken";
@@ -51,4 +51,11 @@ export async function register(req, res) {
     )
 
     res.status(201).json({token})
+}
+
+export async function getMe(req, res) {
+    const userId = req.user.id
+    const user = await getUserByID(userId)
+    if (!user) throw new HttpError("User not found", 401)
+    res.status(200).json(user)
 }
