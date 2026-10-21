@@ -116,6 +116,14 @@ export async function insertPost(post) {
             title : post.title,
             content : post.content,
             authorId : post.authorId
+        },
+        include: {
+            author: {
+                select: {
+                    firstname: true,
+                    lastname: true
+                }
+            }
         }
     })
     return newPost
@@ -126,7 +134,15 @@ export async function updatePostById(id, data){
         where: {
             id :id,
         },
-        data : data
+        data : data,
+        include: {
+            author: {
+                select: {
+                    firstname: true,
+                    lastname: true
+                }
+            }
+        }
     })
     return updatedPost
 }
