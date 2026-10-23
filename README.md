@@ -20,6 +20,7 @@ The server only speaks JSON. Authentication is stateless, with **JSON Web Tokens
 - **Comment moderation**: a comment can be edited or deleted by its author or by the admin.
 - **Reader registration**: sign up and get logged in straight away.
 - **Input validation** on every write route, with clear error messages.
+- **HTML sanitizing**: post content is rich text (HTML written in the admin's editor). It is cleaned before being saved, so only a short list of safe tags can reach the database.
 - **Consistent errors**: every error is JSON with the right HTTP status code, and internal errors never leak details to the client.
 
 ## Tech stack
@@ -30,7 +31,7 @@ The server only speaks JSON. Authentication is stateless, with **JSON Web Tokens
 | Framework | Express 5 |
 | Database | PostgreSQL, Prisma 7 (`@prisma/adapter-pg`) |
 | Auth | jsonwebtoken, bcryptjs |
-| Validation | express-validator |
+| Validation | express-validator, sanitize-html |
 | Other | cors, dotenv, nodemon |
 
 ---
@@ -188,6 +189,16 @@ Returns `401` if the token is missing, invalid or expired, or if the account no 
 
 **Create a post**: `title` and `content` are required. The author is taken from the token.
 
+**Post content is HTML.** On create and edit, `content` goes through `sanitize-html` **before** it is validated:
+
+| Allowed tags | `p`, `br`, `h2`, `h3`, `strong`, `em`, `ul`, `ol`, `li`, `a`, `blockquote`, `code`, `pre` |
+|---|---|
+| Allowed attributes | `href` on `a` only, with safe protocols (`http`, `https`, `mailto`…) |
+
+Anything else is removed: `<script>`, `<img>`, event handlers like `onerror`, `javascript:` links, inline styles. Because sanitizing runs first, a content made only of forbidden HTML ends up empty and is rejected with `400 Content is required`.
+
+Comments stay plain text: front-ends display them as text, so they are never interpreted as HTML.
+
 **Edit a post**: every field is optional, send only what changes.
 
 ```http
@@ -320,7 +331,7 @@ src/
 │   └── queries.js         # All database access
 ├── middlewares/
 │   ├── auth.js            # isAuth, optionalAuth, isAdmin, canEditComment
-│   └── validators.js      # express-validator rules + handleValidation
+│   └── validators.js      # express-validator rules, HTML sanitizing + handleValidation
 └── utils/
     ├── httpErrorHandler.js   # HttpError class
     └── verifyPassword.js     # bcrypt helpers
