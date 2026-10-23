@@ -1,6 +1,20 @@
 import { body, validationResult } from "express-validator"
+import sanitize from "sanitize-html"
 
+const allowedTags = [
+    "h2","h3","strong","em","ul","ol","li","a","blockquote","code","pre","p","br"
+]
 
+function sanitizeContent(value) {
+    const cleanValue = sanitize(
+        value,
+        {
+            allowedTags: allowedTags,
+            allowedAttributes: { a: ["href"] }
+        }
+    )
+    return cleanValue
+}
 
 export const validateLogin = [
     body("email")
@@ -38,6 +52,7 @@ export const validateCreatePost =[
         .notEmpty().withMessage("Title is required"),
     body("content")
         .trim()
+        .customSanitizer((value)=> sanitizeContent(value) )
         .notEmpty().withMessage("Content is required"),
 ]
 
@@ -49,6 +64,7 @@ export const validateUpdatePost =[
     body("content")
         .optional()
         .trim()
+        .customSanitizer((value)=> sanitizeContent(value) )
         .notEmpty().withMessage("Content cannot be empty"),
     body("published")
         .optional()

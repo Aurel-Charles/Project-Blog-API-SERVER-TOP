@@ -40,7 +40,13 @@ async function main() {
   const post1 = await prisma.post.create({
     data: {
       title: "Bienvenue sur mon blog",
-      content: "Premier article : je vous explique pourquoi j'ouvre ce blog.",
+      content: [
+        "<p>Premier article : je vous explique pourquoi j'ouvre ce blog.</p>",
+        "<h2>Un carnet de bord</h2>",
+        "<p>J'apprends le développement <strong>full stack</strong> avec The Odin Project, et j'ai envie de garder une trace de ce que je découvre en chemin.</p>",
+        "<p>Vous trouverez ici :</p>",
+        "<ul><li>des notes sur mes projets web ;</li><li>des retours d'expérience sur le son, en studio comme en live ;</li><li>les erreurs que j'ai faites, et ce qu'elles m'ont appris.</li></ul>",
+      ].join(""),
       createdAt: daysAgo(10),
       publishedAt: daysAgo(9),
       authorId: admin.id,
@@ -50,7 +56,14 @@ async function main() {
   const post2 = await prisma.post.create({
     data: {
       title: "Mixer un concert de jazz",
-      content: "Quelques astuces pour garder la dynamique d'un trio acoustique.",
+      content: [
+        "<p>Quelques astuces pour garder la dynamique d'un trio acoustique.</p>",
+        "<h2>Avant le concert</h2>",
+        "<ol><li>Écouter le groupe <em>sans</em> sonorisation pendant la balance.</li><li>Repérer l'instrument qui porte le morceau.</li><li>Ne renforcer que ce qui manque dans la salle.</li></ol>",
+        "<h2>Pendant le concert</h2>",
+        "<blockquote><p>Le meilleur mix de jazz, c'est souvent celui qu'on ne remarque pas.</p></blockquote>",
+        "<p>Garder la main légère sur les compresseurs : la dynamique, c'est la musique.</p>",
+      ].join(""),
       createdAt: daysAgo(6),
       publishedAt: daysAgo(5),
       authorId: admin.id,
@@ -60,7 +73,15 @@ async function main() {
   await prisma.post.create({
     data: {
       title: "Hugo ou Express ?",
-      content: "Site statique ou API : comment je choisis pour mes clients.",
+      content: [
+        "<p>Site statique ou API : comment je choisis pour mes clients.</p>",
+        "<h2>Quand Hugo suffit</h2>",
+        "<p>Pour un site vitrine dont le contenu change peu, un générateur statique comme <strong>Hugo</strong> est rapide, sûr et presque gratuit à héberger.</p>",
+        "<h2>Quand il faut une API</h2>",
+        "<p>Dès qu'il y a des comptes, des commentaires ou des données qui changent souvent, une API comme celle de ce blog devient utile. Elle se lance avec une simple commande :</p>",
+        "<pre><code>npm run dev</code></pre>",
+        "<p>Plus de détails dans la <a href=\"https://gohugo.io/documentation/\">documentation de Hugo</a>.</p>",
+      ].join(""),
       createdAt: daysAgo(2),
       publishedAt: daysAgo(1),
       authorId: admin.id,
@@ -70,7 +91,11 @@ async function main() {
   await prisma.post.create({
     data: {
       title: "Brouillon : article en cours",
-      content: "Cet article n'est pas encore publié, seul l'admin doit le voir.",
+      content: [
+        "<p>Cet article n'est pas encore publié, seul l'admin doit le voir.</p>",
+        "<h3>À compléter</h3>",
+        "<ul><li>ajouter une introduction ;</li><li>relire le <code>code</code> d'exemple.</li></ul>",
+      ].join(""),
       createdAt: daysAgo(1),
       publishedAt: null,
       authorId: admin.id,
