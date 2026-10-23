@@ -7,7 +7,7 @@ import { authRouter } from "./routes/authRouter.js";
 const app = express()
 const PORT = process.env.PORT || 3000;
 
-app.use(cors())
+app.use(cors({origin: process.env.CORS_ORIGINS.split(',')}))
 app.use(express.json())
 
 // Routes
