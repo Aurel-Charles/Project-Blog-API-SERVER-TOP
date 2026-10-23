@@ -64,6 +64,7 @@ cp .env.example .env
 | `JWT_SECRET` | Secret used to sign tokens. Use a long random string. |
 | `ADMIN_EMAIL` | Email of the admin account created by the seed |
 | `ADMIN_PASSWORD` | Password of the admin account created by the seed |
+| `CORS_ORIGINS` | **Required.** Origins allowed to call the API, separated by commas, with no spaces and no trailing slash (e.g. `http://localhost:5173,http://localhost:5174`). The server will not start without it. |
 | `PORT` | Optional, defaults to `3000` |
 
 Generate a strong `JWT_SECRET` with:
@@ -222,7 +223,7 @@ Content-Type: application/json
 ]
 ```
 
-The author's email and password are never returned.
+Every post route (`GET`, `POST`, `PATCH`) returns posts in this same shape, `author` included. The author's email and password are never returned.
 
 ### Comments
 
@@ -339,7 +340,34 @@ router.patch("/:commentId", isAuth, canEditComment, validateUpdateComment, handl
 
 ---
 
+## CORS
+
+The API only answers browsers coming from the origins listed in `CORS_ORIGINS`:
+
+```js
+app.use(cors({ origin: process.env.CORS_ORIGINS.split(",") }));
+```
+
+The match is exact (protocol, domain and port): `https://example.netlify.app/`, with a trailing slash, does not match the `Origin` header the browser sends. CORS is enforced by the browser only, so it is not a replacement for authentication: tools like `curl` or Postman are not affected.
+
+---
+
+## Deployment
+
+| | |
+|---|---|
+| API | [Render](https://render.com) — `https://project-blog-api-server-top.onrender.com` |
+| Database | PostgreSQL on [Neon](https://neon.tech) |
+
+Environment variables on Render: `DATABASE_URL`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` and `CORS_ORIGINS`. In production, `CORS_ORIGINS` lists both Netlify sites, plus the two localhost origins to test the front-ends locally against the live API.
+
+Values are pasted raw in Render's dashboard: no quotes around them, unlike in a `.env` file.
+
+> On Render's free plan the service sleeps when idle: the first request after a while can take around 30 seconds.
+
+---
+
 ## Related repositories
 
-- `blog-client`: public reader site (coming soon)
-- `blog-admin`: author dashboard (coming soon)
+- **Reader client** — the public blog, where visitors read posts and comment — [repo](https://github.com/Aurel-Charles/Project-Blog-API-CLIENT-TOP) · [live](https://project-blog-api-client-top.netlify.app)
+- **Admin portal** — the author's dashboard, to write, publish and moderate — [repo](https://github.com/Aurel-Charles/Project-Blog-API-ADMIN-TOP) · [live](https://project-blog-api-admin-top.netlify.app)
