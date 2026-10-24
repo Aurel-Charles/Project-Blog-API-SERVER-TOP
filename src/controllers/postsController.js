@@ -3,8 +3,9 @@ import { HttpError } from "../utils/httpErrorHandler.js";
 
 export async function getPosts(req, res) {
     const isAdmin = req.user?.role === "ADMIN";
+    const showDrafts = isAdmin && req.query.status === "all"
 
-    const allPosts = isAdmin
+    const allPosts = showDrafts
     ? await getAllPosts()
     : await getPublishedPosts();
 
@@ -18,8 +19,9 @@ export async function getPostById(req, res) {
         }
 
         const isAdmin = req.user?.role === "ADMIN";
+        const showDrafts = isAdmin && req.query.status === "all"
 
-        const post = isAdmin
+        const post = showDrafts
         ? await getPostByIdForAdmin(id)
         : await getPublishedPostById(id);
 

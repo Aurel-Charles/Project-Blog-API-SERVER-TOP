@@ -15,7 +15,7 @@ The server only speaks JSON. Authentication is stateless, with **JSON Web Tokens
 
 - **Draft / published workflow**: a post is a draft until it is published. The publication date is set by the server, and kept if the post is re-published.
 - **Role-based access**: one `ADMIN` (the author) and `USER` accounts for readers. The admin account is created by the seed script and can never be created through the API.
-- **Admin sees everything**: the same public routes return drafts too when the request comes from the admin.
+- **Secure by default**: post routes only return published posts, for everyone. The admin gets drafts too only when asking for them explicitly with `?status=all`, so a front-end that forgets the parameter can never leak a draft.
 - **Open comments**: anonymous visitors comment with a name; logged-in readers get their name filled in by the server.
 - **Comment moderation**: a comment can be edited or deleted by its author or by the admin.
 - **Reader registration**: sign up and get logged in straight away.
@@ -140,6 +140,7 @@ Authorization: Bearer <token>
 | `POST` | `/auth/register` | Public | `firstname`, `lastname`, `email`, `password`, `confirmPassword` |
 | `POST` | `/auth/login` | Public | `email`, `password` |
 | `GET` | `/auth/me` | Logged in | — |
+| `GET` | `/auth/me/comments` | Logged in | — |
 
 **Register rules**: `firstname` and `lastname` are required (20 characters max), `email` must be valid and not already used (`409` otherwise), `password` needs at least 7 characters and `confirmPassword` must match it. New accounts always get the `USER` role.
 
@@ -177,15 +178,39 @@ Authorization: Bearer <token>
 
 Returns `401` if the token is missing, invalid or expired, or if the account no longer exists. The password is never returned.
 
+**My comments**: `GET /auth/me/comments` returns the comments written by the logged-in user, newest first, each with the `id` and `title` of its post. Comments on posts that are no longer published are left out, so every link leads to a readable post. An account without comments gets an empty array.
+
+```json
+[
+  {
+    "id": 7,
+    "content": "Great article!",
+    "name": "Léa M.",
+    "createdAt": "2026-10-17T09:00:00.000Z",
+    "updatedAt": "2026-10-17T09:00:00.000Z",
+    "postId": 3,
+    "authorId": 2,
+    "post": { "id": 3, "title": "Hugo ou Express ?" }
+  }
+]
+```
+
 ### Posts
 
 | Method | Route | Access | Description |
 |---|---|---|---|
-| `GET` | `/posts` | Public | Published posts, newest first. The admin also gets drafts. |
-| `GET` | `/posts/:postId` | Public | One post. Drafts return `404` unless you are the admin. |
+| `GET` | `/posts` | Public | Published posts, newest first. With `?status=all`, the admin gets drafts too (newest created first). |
+| `GET` | `/posts/:postId` | Public | One published post. A draft returns `404`, unless the admin asks with `?status=all`. |
 | `POST` | `/posts` | Admin | Create a post (created as a draft) |
 | `PATCH` | `/posts/:postId` | Admin | Edit and / or publish / unpublish |
 | `DELETE` | `/posts/:postId` | Admin | Delete a post and its comments |
+
+**Drafts and `?status=all`**: the parameter is only honoured for a token with the `ADMIN` role. Anyone else, or the admin without it, only ever gets published posts. The public blog never sends it; the admin portal sends it on its dashboard, post page and edit page.
+
+```http
+GET /posts?status=all
+Authorization: Bearer <admin token>
+```
 
 **Create a post**: `title` and `content` are required. The author is taken from the token.
 

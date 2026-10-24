@@ -200,3 +200,24 @@ export async function deleteCommentById(id) {
         where: {id : id}
     })
 }
+
+export async function getCommentsByAuthor(authorId) {
+    const comments = await prisma.comment.findMany({
+        where : {
+            authorId : authorId,
+            post : {
+                publishedAt : {not: null}
+            }
+        },
+        include : {
+            post : {
+                select :{
+                    id : true,
+                    title : true
+                }
+            }
+        },
+        orderBy : {createdAt: "desc"}
+    })
+    return comments
+}

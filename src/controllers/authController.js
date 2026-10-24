@@ -1,4 +1,4 @@
-import { getUserByEmail, getUserByID, insertUser } from "../db/queries.js"
+import { getCommentsByAuthor, getUserByEmail, getUserByID, insertUser } from "../db/queries.js"
 import { HttpError } from "../utils/httpErrorHandler.js";
 import { createPassword, verifyPassword } from "../utils/verifyPassword.js";
 import jwt from "jsonwebtoken";
@@ -58,4 +58,9 @@ export async function getMe(req, res) {
     const user = await getUserByID(userId)
     if (!user) throw new HttpError("User not found", 401)
     res.status(200).json(user)
+}
+
+export async function getAllUserComments(req, res) {
+    const comments = await getCommentsByAuthor(req.user.id)
+    res.json(comments)
 }
