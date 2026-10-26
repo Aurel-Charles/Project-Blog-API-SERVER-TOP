@@ -90,6 +90,38 @@ export const validateUpdateComment = [
         .isLength({max: 250}).withMessage("Comment must be 250 characters max")
 ]
 
+export const validateUpdateMe =[
+    body("firstname")
+        .optional()
+        .trim()
+        .notEmpty().withMessage("Firstname cannot be empty")
+        .isLength({max: 20}).withMessage("Firstname must be 20 characters max"),
+    body("lastname")
+        .optional()
+        .trim()
+        .notEmpty().withMessage("Lastname cannot be empty")
+        .isLength({max: 20}).withMessage("Lastname must be 20 characters max"),
+]
+
+export const validateUpdatePassword = [
+    body("currentPassword")
+    .notEmpty().withMessage("Current password is required"),
+    body("newPassword")
+    .notEmpty().withMessage("New password is required")
+    .isLength({min: 7}).withMessage("Password must be at least 7 characters"),
+    body("confirmNewPassword")
+    .notEmpty().withMessage("confirmPassword is required")
+    .custom((value, {req}) => value === req.body.newPassword ).withMessage("Passwords do not match"),   
+]
+
+export const validateUpdateEmail = [
+    body("email")
+    .trim()
+    .notEmpty().withMessage("Email is required").bail()
+    .isEmail().withMessage("Invalid email"),
+    body("currentPassword")
+    .notEmpty().withMessage("Current password is required"),
+]
 
 
 export function handleValidation(req, res, next) {

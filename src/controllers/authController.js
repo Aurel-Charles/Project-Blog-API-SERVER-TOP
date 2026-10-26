@@ -1,7 +1,7 @@
-import { getCommentsByAuthor, getUserByEmail, getUserByID, insertUser } from "../db/queries.js"
+import { getCommentsByAuthor, getUserByEmail, getUserByID, insertUser, updateUser } from "../db/queries.js"
+import { createToken } from "../utils/createToken.js";
 import { HttpError } from "../utils/httpErrorHandler.js";
 import { createPassword, verifyPassword } from "../utils/verifyPassword.js";
-import jwt from "jsonwebtoken";
 
 
 export async function login(req, res){
@@ -16,11 +16,7 @@ export async function login(req, res){
         throw new HttpError("Email or Password is wrong", 401);
     }
 
-    const token = jwt.sign(
-        {id: user.id, role: user.role},
-        process.env.JWT_SECRET,
-        {expiresIn: "1d"}
-    )
+    const token = createToken(user)
     
     res.json({token})
 }
@@ -44,11 +40,7 @@ export async function register(req, res) {
     
     const registeredUser = await insertUser(newUser)
 
-    const token = jwt.sign(
-        {id: registeredUser.id, role: registeredUser.role},
-        process.env.JWT_SECRET,
-        {expiresIn: "1d"}
-    )
+    const token = createToken(registeredUser)
 
     res.status(201).json({token})
 }
@@ -63,4 +55,39 @@ export async function getMe(req, res) {
 export async function getAllUserComments(req, res) {
     const comments = await getCommentsByAuthor(req.user.id)
     res.json(comments)
+}
+
+export async function updateMe(req, res) {
+    const id = req.user.id
+    const data = {
+        firstname : req.body.firstname,
+        lastname : req.body.lastname
+    }
+    const updatedUser = await updateUser(id, data)
+    res.json(updatedUser)
+}
+
+export async function updatePassword(req, res) {
+    const id = req.user.id
+    const newPassword = req.body.newPassword
+    const hashNewPassword = await createPassword(newPassword)
+    const data = {
+        password : hashNewPassword,
+        passwordChangedAt : new Date()
+    }
+    const user =  await updateUser(id, data)
+    const token = createToken(user)
+    res.json({token})
+}
+
+export async function updateEmail(req, res) {
+    const email = req.body.email
+    const id = req.user.id
+    const existingUser = await getUserByEmail(email)
+    if (existingUser && id !== existingUser.id) {
+        throw new HttpError("Email already used", 409);
+    }
+    const data = {email : email}
+    const updatedUser = await updateUser(id, data)
+    res.json(updatedUser)
 }

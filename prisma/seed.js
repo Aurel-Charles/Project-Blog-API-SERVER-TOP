@@ -21,17 +21,17 @@ async function main() {
   });
 
   // 2. Un lecteur inscrit, pour tester les commentaires connectés
-  // const readerPassword = await bcrypt.hash("lecteur123", 10);
-  // const reader = await prisma.user.upsert({
-  //   where: { email: "lecteur@test.fr" },
-  //   update: {},
-  //   create: {
-  //     firstname: "Léa",
-  //     lastname: "Martin",
-  //     email: "lecteur@test.fr",
-  //     password: readerPassword,
-  //   },
-  // });
+  const readerPassword = await bcrypt.hash("lecteur123", 10);
+  const reader = await prisma.user.upsert({
+    where: { email: "lecteur@test.fr" },
+    update: {},
+    create: {
+      firstname: "Léa",
+      lastname: "Martin",
+      email: "lecteur@test.fr",
+      password: readerPassword,
+    },
+  });
 
   // 3. On repart de zéro pour les posts (les commentaires partent avec, grâce au Cascade)
   await prisma.post.deleteMany();
@@ -110,12 +110,12 @@ async function main() {
         name: "Visiteur anonyme",
         postId: post1.id,
       },
-      // {
-      //   content: "Merci pour les conseils sur le trio.",
-      //   name: reader.firstname,
-      //   postId: post2.id,
-      //   authorId: reader.id,
-      // },
+      {
+        content: "Merci pour les conseils sur le trio.",
+        name: reader.firstname,
+        postId: post2.id,
+        authorId: reader.id,
+      },
     ],
   });
 

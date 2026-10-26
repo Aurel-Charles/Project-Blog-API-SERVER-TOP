@@ -36,6 +36,30 @@ export async function insertUser(user) {
     return newUser
 }
 
+export async function getUserWithPasswordById(id) {
+    const user = await prisma.user.findUnique({
+        where : {id : id},
+    })
+    return user
+}
+
+export async function updateUser(id, data) {
+    const updatedUser = await prisma.user.update({
+        where : { 
+                id : id 
+            },
+        data : data,
+        select: {
+            id: true,
+            firstname: true,
+            lastname: true,
+            email: true,
+            role: true
+        }
+    })
+    return updatedUser
+}
+
 // POSTS queries ----------------------------------
 
 export async function getAllPosts(){

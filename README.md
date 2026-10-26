@@ -141,6 +141,9 @@ Authorization: Bearer <token>
 | `POST` | `/auth/login` | Public | `email`, `password` |
 | `GET` | `/auth/me` | Logged in | — |
 | `GET` | `/auth/me/comments` | Logged in | — |
+| `PATCH` | `/auth/me` | Logged in | `firstname?`, `lastname?` |
+| `PATCH` | `/auth/me/email` | Logged in + current password | `email`, `currentPassword` |
+| `PATCH` | `/auth/me/password` | Logged in + current password | `currentPassword`, `newPassword`, `confirmNewPassword` |
 
 **Register rules**: `firstname` and `lastname` are required (20 characters max), `email` must be valid and not already used (`409` otherwise), `password` needs at least 7 characters and `confirmPassword` must match it. New accounts always get the `USER` role.
 
@@ -194,6 +197,38 @@ Returns `401` if the token is missing, invalid or expired, or if the account no 
   }
 ]
 ```
+
+### Updating the account
+
+The account is updated through three separate routes, so that sensitive changes always ask for the current password.
+
+| Route | What changes | Response |
+|---|---|---|
+| `PATCH /auth/me` | `firstname` and / or `lastname` (each optional, not empty, 20 characters max) | `200` with the updated user |
+| `PATCH /auth/me/email` | `email` (valid, not used by another account, otherwise `409`) | `200` with the updated user |
+| `PATCH /auth/me/password` | password (`newPassword`: 7 characters min, `confirmNewPassword` must match) | `204 No Content` |
+
+The updated user has the same shape as `GET /auth/me`, so a client can replace its stored user directly. Sending your own current email is accepted and changes nothing.
+
+**Current password**: on the email and password routes, `currentPassword` is checked against the stored hash by the `checkCurrentPassword` middleware. A wrong password returns **`403`** (*"Current password is incorrect"*), not `401`: the user is logged in, only this action is refused, so a client never mistakes a typo for an expired session.
+
+**Only the expected fields are saved.** The controllers build the update from the allowed fields themselves and never pass `req.body` to the database, so extra fields such as `"role": "ADMIN"` are ignored.
+
+```http
+PATCH /auth/me/password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "currentPassword": "secret123",
+  "newPassword": "new-secret456",
+  "confirmNewPassword": "new-secret456"
+}
+```
+
+`204 No Content`
+
+Changing the password does not end existing sessions: tokens already issued stay valid until they expire (1 day).
 
 ### Posts
 
@@ -324,7 +359,7 @@ Validation errors list every invalid field:
 |---|---|
 | `400` | Invalid input |
 | `401` | Not logged in, invalid or expired token, wrong credentials |
-| `403` | Logged in, but not allowed (e.g. not the admin, not the comment's author) |
+| `403` | Logged in, but not allowed (e.g. not the admin, not the comment's author, wrong current password) |
 | `404` | Resource or route not found |
 | `409` | Email already used |
 | `500` | Server error (details are logged, never sent to the client) |
@@ -355,7 +390,7 @@ src/
 │   ├── prisma.js          # Prisma client instance
 │   └── queries.js         # All database access
 ├── middlewares/
-│   ├── auth.js            # isAuth, optionalAuth, isAdmin, canEditComment
+│   ├── auth.js            # isAuth, optionalAuth, isAdmin, canEditComment, checkCurrentPassword
 │   └── validators.js      # express-validator rules, HTML sanitizing + handleValidation
 └── utils/
     ├── httpErrorHandler.js   # HttpError class
