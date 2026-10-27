@@ -3,6 +3,7 @@ import express from 'express'
 import { postsRouter } from "./routes/postsRouter.js";
 import cors from "cors";
 import { authRouter } from "./routes/authRouter.js";
+import { docsRouter } from "./routes/docsRouter.js";
 
 const app = express()
 const PORT = process.env.PORT || 3000;
@@ -13,6 +14,7 @@ app.use(express.json())
 // Routes
 app.use('/posts', postsRouter)
 app.use('/auth', authRouter)
+app.use('/docs', docsRouter)
 
 app.get('/', (req,res)=> {
     res.json({App: "Blog Server API", message : "Hello blogers"})

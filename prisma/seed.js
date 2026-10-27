@@ -20,18 +20,23 @@ async function main() {
     },
   });
 
-  // 2. Un lecteur inscrit, pour tester les commentaires connectés
-  const readerPassword = await bcrypt.hash("lecteur123", 10);
-  const reader = await prisma.user.upsert({
-    where: { email: "lecteur@test.fr" },
-    update: {},
-    create: {
-      firstname: "Léa",
-      lastname: "Martin",
-      email: "lecteur@test.fr",
-      password: readerPassword,
-    },
-  });
+  // 2. Un lecteur de test, pour tester les commentaires connectés.
+  //    Créé seulement si READER_EMAIL et READER_PASSWORD sont définis (en local) :
+  //    en production, on ne les définit pas, et ce compte n'existe jamais.
+  let reader = null;
+  if (process.env.READER_EMAIL && process.env.READER_PASSWORD) {
+    const readerPassword = await bcrypt.hash(process.env.READER_PASSWORD, 10);
+    reader = await prisma.user.upsert({
+      where: { email: process.env.READER_EMAIL },
+      update: {},
+      create: {
+        firstname: "Léa",
+        lastname: "Martin",
+        email: process.env.READER_EMAIL,
+        password: readerPassword,
+      },
+    });
+  }
 
   // 3. On repart de zéro pour les posts (les commentaires partent avec, grâce au Cascade)
   await prisma.post.deleteMany();
@@ -77,7 +82,8 @@ async function main() {
     },
   });
 
-  // 5. Commentaires : un anonyme, un lecteur connecté
+  // 5. Commentaires : un anonyme, et un du lecteur de test
+  //    (anonyme lui aussi, avec le même nom, si le lecteur n'existe pas)
   await prisma.comment.createMany({
     data: [
       {
@@ -87,16 +93,16 @@ async function main() {
       },
       {
         content: "Merci pour les conseils sur le trio.",
-        name: reader.firstname,
+        name: "Léa M.",
         postId: post2.id,
-        authorId: reader.id,
+        authorId: reader ? reader.id : null,
       },
     ],
   });
 
   console.log("Seed terminé :");
   console.log("  admin   :", admin.email);
-  console.log("  lecteur :", reader.email, "(mdp : lecteur123)");
+  console.log("  lecteur :", reader ? reader.email : "non créé (READER_EMAIL / READER_PASSWORD absents)");
   console.log("  4 posts (3 publiés, 1 brouillon), 2 commentaires");
 }
 

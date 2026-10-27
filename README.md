@@ -65,6 +65,7 @@ cp .env.example .env
 | `JWT_SECRET` | Secret used to sign tokens. Use a long random string. |
 | `ADMIN_EMAIL` | Email of the admin account created by the seed |
 | `ADMIN_PASSWORD` | Password of the admin account created by the seed |
+| `READER_EMAIL`, `READER_PASSWORD` | Optional, **local only**. When both are set, the seed also creates a test reader. Never set them in production |
 | `CORS_ORIGINS` | **Required.** Origins allowed to call the API, separated by commas, with no spaces and no trailing slash (e.g. `http://localhost:5173,http://localhost:5174`). The server will not start without it. |
 | `PORT` | Optional, defaults to `3000` |
 
@@ -87,7 +88,7 @@ npm run seed               # create the admin account and sample data
 The seed creates:
 
 - the admin account, from `ADMIN_EMAIL` / `ADMIN_PASSWORD`
-- a test reader: `lecteur@test.fr` / `lecteur123`
+- a test reader, from `READER_EMAIL` / `READER_PASSWORD`, only if both are set
 - 4 posts (3 published, 1 draft) and 2 comments
 
 ### Run
@@ -345,6 +346,14 @@ Content-Type: application/json
 
 Anonymous comments have no author, so only the admin can edit or delete them.
 
+### Docs
+
+| Method | Route | Access | Description |
+|---|---|---|---|
+| `GET` | `/docs` | Logged in | This README, as Markdown |
+
+`GET /docs` reads `README.md` from disk on each request and returns it as `{ "content": "..." }`. The reader client renders it on a members-only documentation page, so the page is always up to date with the last deployment: there is nothing to copy by hand.
+
 ---
 
 ## Errors
@@ -396,6 +405,7 @@ src/
 ├── routes/                # URL → middlewares → controller
 │   ├── authRouter.js
 │   ├── postsRouter.js
+│   ├── docsRouter.js      # GET /docs
 │   └── commentsRouter.js  # nested under /posts/:postId
 ├── controllers/           # Read the request, call queries, send JSON
 ├── db/
@@ -406,7 +416,9 @@ src/
 │   └── validators.js      # express-validator rules, HTML sanitizing + handleValidation
 └── utils/
     ├── httpErrorHandler.js   # HttpError class
-    └── verifyPassword.js     # bcrypt helpers
+    ├── verifyPassword.js     # bcrypt helpers
+    ├── createToken.js        # signs the JWT (login, register, password change)
+    └── readReadme.js         # reads README.md for GET /docs
 prisma/
 ├── schema.prisma
 ├── migrations/
