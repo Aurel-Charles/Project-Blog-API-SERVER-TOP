@@ -144,6 +144,7 @@ Authorization: Bearer <token>
 | `PATCH` | `/auth/me` | Logged in | `firstname?`, `lastname?` |
 | `PATCH` | `/auth/me/email` | Logged in + current password | `email`, `currentPassword` |
 | `PATCH` | `/auth/me/password` | Logged in + current password | `currentPassword`, `newPassword`, `confirmNewPassword` |
+| `DELETE` | `/auth/me` | Logged in + current password (not the admin) | `currentPassword` |
 
 **Register rules**: `firstname` and `lastname` are required (20 characters max), `email` must be valid and not already used (`409` otherwise), `password` needs at least 7 characters and `confirmPassword` must match it. New accounts always get the `USER` role.
 
@@ -206,11 +207,12 @@ The account is updated through three separate routes, so that sensitive changes 
 |---|---|---|
 | `PATCH /auth/me` | `firstname` and / or `lastname` (each optional, not empty, 20 characters max) | `200` with the updated user |
 | `PATCH /auth/me/email` | `email` (valid, not used by another account, otherwise `409`) | `200` with the updated user |
-| `PATCH /auth/me/password` | password (`newPassword`: 7 characters min, `confirmNewPassword` must match) | `204 No Content` |
+| `PATCH /auth/me/password` | password (`newPassword`: 7 characters min, `confirmNewPassword` must match) | `200` with a new `{ token }` |
+| `DELETE /auth/me` | deletes the account | `204 No Content` |
 
 The updated user has the same shape as `GET /auth/me`, so a client can replace its stored user directly. Sending your own current email is accepted and changes nothing.
 
-**Current password**: on the email and password routes, `currentPassword` is checked against the stored hash by the `checkCurrentPassword` middleware. A wrong password returns **`403`** (*"Current password is incorrect"*), not `401`: the user is logged in, only this action is refused, so a client never mistakes a typo for an expired session.
+**Current password**: on the email, password and delete routes, `currentPassword` is checked against the stored hash by the `checkCurrentPassword` middleware. A wrong password returns **`403`** (*"Current password is incorrect"*), not `401`: the user is logged in, only this action is refused, so a client never mistakes a typo for an expired session.
 
 **Only the expected fields are saved.** The controllers build the update from the allowed fields themselves and never pass `req.body` to the database, so extra fields such as `"role": "ADMIN"` are ignored.
 
@@ -226,9 +228,17 @@ Content-Type: application/json
 }
 ```
 
-`204 No Content`
+`200 OK`
 
-Changing the password does not end existing sessions: tokens already issued stay valid until they expire (1 day).
+```json
+{ "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+```
+
+**Changing the password ends every other session.** Each user has a `passwordChangedAt` date, updated on every password change. On each authenticated request, the token's issue date (`iat`) is compared with it: a token issued **before** the last password change is rejected with `401` by `isAuth`, and ignored by `optionalAuth` (the request is treated as anonymous). The response carries a fresh token, so the device that made the change stays logged in: the client must store it in place of the old one.
+
+`iat` is in seconds and `passwordChangedAt` in milliseconds, so the date is rounded down to the second before comparing. This means `isAuth` now reads the user from the database on every request.
+
+**Deleting the account**: `DELETE /auth/me` with `{ "currentPassword": "..." }`. The user's comments are kept, under their name, with no link to the account anymore. The admin account cannot be deleted (`403`): it owns every post.
 
 ### Posts
 
@@ -373,6 +383,8 @@ Validation errors list every invalid field:
 - **Comment**: `content`, `name`, belongs to a Post, optionally linked to a User
 
 Deleting a post deletes its comments. Deleting a user keeps their comments (the `name` stays, the link is removed).
+
+`User.passwordChangedAt` defaults to the creation date and is updated on every password change; it is what invalidates older tokens. Dates are stored in UTC, so the database should run in UTC too (Neon does by default).
 
 The full schema is in [`prisma/schema.prisma`](prisma/schema.prisma).
 

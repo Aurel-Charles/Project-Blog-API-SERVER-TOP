@@ -60,6 +60,12 @@ export async function updateUser(id, data) {
     return updatedUser
 }
 
+export async function deleteUserById(id) {
+    await prisma.user.delete({
+        where : {id : id}
+    })
+}
+
 // POSTS queries ----------------------------------
 
 export async function getAllPosts(){

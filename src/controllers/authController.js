@@ -1,4 +1,4 @@
-import { getCommentsByAuthor, getUserByEmail, getUserByID, insertUser, updateUser } from "../db/queries.js"
+import { deleteUserById, getCommentsByAuthor, getUserByEmail, getUserByID, insertUser, updateUser } from "../db/queries.js"
 import { createToken } from "../utils/createToken.js";
 import { HttpError } from "../utils/httpErrorHandler.js";
 import { createPassword, verifyPassword } from "../utils/verifyPassword.js";
@@ -90,4 +90,15 @@ export async function updateEmail(req, res) {
     const data = {email : email}
     const updatedUser = await updateUser(id, data)
     res.json(updatedUser)
+}
+
+export async function deleteMe(req, res) {
+    if (req.user.role === "ADMIN") {
+        throw new HttpError("The admin account cannot be deleted", 403)
+    }
+
+    const id = req.user.id
+    await deleteUserById(id)
+
+    res.status(204).end()
 }

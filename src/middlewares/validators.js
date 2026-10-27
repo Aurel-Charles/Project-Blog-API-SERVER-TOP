@@ -123,7 +123,12 @@ export const validateUpdateEmail = [
     .notEmpty().withMessage("Current password is required"),
 ]
 
+export const validateDeleteMe = [
+    body("currentPassword")
+    .notEmpty().withMessage("Current password is required"),
+]
 
+// -----------
 export function handleValidation(req, res, next) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
