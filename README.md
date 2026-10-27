@@ -395,7 +395,7 @@ Deleting a post deletes its comments. Deleting a user keeps their comments (the 
 
 `User.passwordChangedAt` defaults to the creation date and is updated on every password change; it is what invalidates older tokens. Dates are stored in UTC, so the database should run in UTC too (Neon does by default).
 
-The full schema is in [`prisma/schema.prisma`](prisma/schema.prisma).
+The full schema is in [`prisma/schema.prisma`](https://github.com/Aurel-Charles/Project-Blog-API-SERVER-TOP/blob/main/prisma/schema.prisma).
 
 ## Project structure
 
@@ -464,5 +464,6 @@ Values are pasted raw in Render's dashboard: no quotes around them, unlike in a 
 
 ## Related repositories
 
+- **Blog API** — the server behind both front-ends, documented on this page — [repo](https://github.com/Aurel-Charles/Project-Blog-API-SERVER-TOP)
 - **Reader client** — the public blog, where visitors read posts and comment — [repo](https://github.com/Aurel-Charles/Project-Blog-API-CLIENT-TOP) · [live](https://project-blog-api-client-top.netlify.app)
 - **Admin portal** — the author's dashboard, to write, publish and moderate — [repo](https://github.com/Aurel-Charles/Project-Blog-API-ADMIN-TOP) · [live](https://project-blog-api-admin-top.netlify.app)
