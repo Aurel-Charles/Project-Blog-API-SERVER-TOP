@@ -5,8 +5,8 @@ import cors from "cors";
 import { authRouter } from "./routes/authRouter.js";
 import { docsRouter } from "./routes/docsRouter.js";
 
-const app = express()
-const PORT = process.env.PORT || 3000;
+export const app = express()
+
 
 app.use(cors({origin: process.env.CORS_ORIGINS.split(',')}))
 app.use(express.json())
@@ -31,9 +31,3 @@ app.use((err, req, res, next) => {
     res.status(status).json({ error: message });
   });
 
-app.listen(PORT, (error)=> {
-    if (error) {
-        throw error;
-    }
-    console.log(`Blog Server API - Express app - Visit: http://localhost:${PORT}`);
-})
